@@ -235,7 +235,7 @@ bool preceed(char * s1, char* s2){
 
 	}
 	
-	 if( s1[i] <= s2[j] ){
+	 if( toupper(s1[i]) <= toupper(s2[j]) ){
 		 return true;
 	 } 
 	 
