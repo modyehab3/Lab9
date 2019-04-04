@@ -1,0 +1,476 @@
+//
+// APS105 Lab 9
+//
+// This is a program written to maintain a personal music library,
+// using a linked list to hold the songs in the library.
+//
+// Author: Ahmed Abdelmoneim
+// Student Number: 1004864042
+//
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <stdbool.h>
+
+// A node in the linked list
+
+// Each string in the node is declared as a character pointer variable,
+// so they need to be dynamically allocated using the malloc() function,
+// and deallocated using the free() function after use.
+
+typedef struct node {
+    char *artist;
+    char *songName;
+    char *genre;
+    struct node *next;
+} Node;
+
+typedef struct linkedList{
+	
+	Node* head;
+}LinkedList;
+
+// Declarations of linked list functions
+//
+// DECLARE YOUR LINKED-LIST FUNCTIONS HERE
+//
+
+Node* createNewNode (char* inputArtist, char* inputSongName, char* inputGenre);
+bool preceed(char * s1, char* s2);
+bool insertNode (LinkedList* list, char* songNameP, char* artistNameP, char* genreNameP);
+void printList (LinkedList* list);
+bool searchList(LinkedList* list, char* string);
+void deleteFront(LinkedList* list);
+int deleteAllNodes(LinkedList* list);
+bool deleteFirstMatch(LinkedList *list, char* userSong);
+bool isEmpty(LinkedList *list);
+void freeNode(Node* nodePointer);
+
+
+
+// Declarations of support functions
+// See below the main function for descriptions of what these functions do
+
+void inputStringFromUser(char *prompt, char *s, int arraySize);
+void songNameDuplicate(char *songName);
+void songNameFound(char *songName);
+void songNameNotFound(char *songName);
+void songNameDeleted(char *songName);
+void artistFound(char *artist);
+void artistNotFound(char *artist);
+void printMusicLibraryEmpty(void);
+void printMusicLibraryTitle(void);
+
+const int MAX_LENGTH = 1024;
+
+int main(void) {
+    // Declare the head of the linked list.
+    LinkedList myList;
+	myList.head = NULL;
+
+    // Announce the start of the program
+    printf("Personal Music Library.\n\n");
+    printf("%s", "Commands are I (insert), D (delete), S (search by song name),\n"
+           "P (print), Q (quit).\n");
+
+    char response;
+    char input[MAX_LENGTH + 1];
+    do {
+        inputStringFromUser("\nCommand", input, MAX_LENGTH);
+
+        // Response is the first character entered by user.
+        // Convert to uppercase to simplify later comparisons.
+        response = toupper(input[0]);
+
+        if (response == 'I') {
+            // Insert a song into the linked list.
+            // Maintain the list in alphabetical order by song name.
+            char *promptName = "\nSong name" ;
+            char *promptArtist =  "\nArtist" ;
+            char *promptGenre = "\nGenre" ;
+			
+
+			char* songName = (char*) malloc( (MAX_LENGTH + 1)*sizeof(char) );
+			char* artistName = (char*) malloc( (MAX_LENGTH + 1)*sizeof(char) );
+			char* genreName = (char*) malloc( (MAX_LENGTH + 1)*sizeof(char) );
+			
+			inputStringFromUser(promptName, songName, MAX_LENGTH);
+			inputStringFromUser(promptArtist, artistName, MAX_LENGTH);
+			inputStringFromUser(promptGenre, genreName, MAX_LENGTH);
+			
+			insertNode( &myList, songName, artistName, genreName);
+			
+			
+
+        }
+        else if (response == 'D') {
+            // Delete a song from the list.
+
+            char *prompt = "\nEnter the name of the song to be deleted" ;
+			char* userString = (char*) malloc(sizeof(char)*(MAX_LENGTH + 1));
+			inputStringFromUser(prompt, userString, MAX_LENGTH);
+			if( deleteFirstMatch(&myList, userString) ){
+				songNameDeleted(userString);
+			}
+			else{
+				songNameNotFound(userString);
+			}
+            
+
+        }
+        else if (response == 'S') {
+            // Search for a song by its name.
+
+            char *prompt = "\nEnter the name of the song to search for" ;
+			char* userString = (char*) malloc(sizeof(char)*(MAX_LENGTH + 1));
+			inputStringFromUser(prompt, userString, MAX_LENGTH);
+			bool found = searchList(&myList, userString);
+			if(!found){
+				songNameNotFound(userString);
+			}
+
+
+        }
+        else if (response == 'P') {
+            // Print the music library.
+
+            printList(&myList);
+
+        }
+        else if (response == 'Q') {
+            ; // do nothing, we'll catch this below
+        }
+        else {
+            // do this if no command matched ...
+            printf ("\nInvalid command.\n");
+        }
+    } while (response != 'Q');
+
+    // Delete the entire linked list.
+    deleteAllNodes(&myList);
+
+    // Print the linked list to confirm deletion.
+    printList(&myList);
+
+    return 0;
+}
+
+// Support Function Definitions
+
+// Prompt the user for a string safely, without buffer overflow
+void inputStringFromUser(char *prompt, char *s, int maxStrLength) {
+    int i = 0;
+    char c;
+
+    printf("%s --> ", prompt);
+    while (i < maxStrLength && (c = getchar()) != '\n')
+        s[i++] = c;
+    s[i] = '\0';
+}
+
+// Function to call when the user is trying to insert a song name
+// that is already in the personal music library.
+void songNameDuplicate(char *songName) {
+    printf("\nA song with the name '%s' is already in the music library.\n"
+           "No new song entered.\n", songName);
+}
+
+// Function to call when a song name was found in the personal music library.
+void songNameFound(char *songName) {
+    printf("\nThe song name '%s' was found in the music library.\n",
+           songName);
+}
+
+// Function to call when a song name was not found in the personal music library.
+void songNameNotFound(char *songName) {
+    printf("\nThe song name '%s' was not found in the music library.\n",
+           songName);
+}
+
+// Function to call when a song name that is to be deleted
+// was found in the personal music library.
+void songNameDeleted(char *songName) {
+    printf("\nDeleting a song with name '%s' from the music library.\n",
+           songName);
+}
+
+// Function to call when printing an empty music library.
+void printMusicLibraryEmpty(void) {
+    printf("\nThe music library is empty.\n");
+}
+
+// Function to call to print a title when the entire music library is printed.
+void printMusicLibraryTitle(void) {
+    printf("\nMy Personal Music Library: \n");
+}
+
+// Add your functions below this line.
+
+Node* createNewNode(char* inputArtist, char* inputSongName, char* inputGenre){
+	
+	Node* newNodeP = (Node*) malloc(sizeof(Node));
+	newNodeP -> artist = inputArtist;
+	newNodeP -> songName = inputSongName;
+	newNodeP -> genre = inputGenre;
+	newNodeP -> next = NULL;
+	
+	return newNodeP;
+	
+}
+	
+
+bool preceed(char * s1, char* s2){
+	
+	int i = 0, j = 0;
+	while( toupper(s1[i]) == toupper(s2[j]) && s1[i] != '\0' && s2[j] != '\0'){
+		
+		do{
+			i++;			
+		}while(s1[i] == ' ' && s1[i] != '\0');
+		do{
+			j++;			
+		}while(s2[j] == ' ' && s2[j] != '\0');
+
+	}
+	
+	 if( s1[i] <= s2[j] ){
+		 return true;
+	 } 
+	 
+	 return false;
+	
+}
+
+
+bool insertNode (LinkedList* list, char* songNameP, char* artistNameP, char* genreNameP){
+	
+	// First check if the name is not already taken inside the array:
+	Node* n = list -> head;
+	while( n != NULL ){
+		
+		if( strcmp(n -> songName, songNameP) == 0 ){
+			songNameDuplicate(songNameP);
+			return false;
+		}
+		
+		n = n -> next;
+	}
+
+	Node* temp = createNewNode(artistNameP, songNameP, genreNameP);
+	
+	// return false if memory allocation is denied
+	if(temp == NULL){
+		return false;
+	}
+	
+	// Place at the beginning of list is empty 
+	if(list -> head == NULL){
+		list -> head = temp;
+		return true;
+	}
+	
+	// If inputted node should go before first node
+	if (preceed(temp -> songName, list -> head -> songName)) {
+		temp -> next = list -> head;
+		list -> head = temp;
+		return true;
+	}
+
+	
+	
+	// When there is only one node in the list:
+	if(list -> head -> next == NULL){ //if the present node should go first in the list
+		if (preceed(list -> head -> songName, temp -> songName)){
+			// sets the next of the new node to the proper pointer for linking it into the list
+			temp -> next = list -> head -> next;
+			// sets the next of the previous node to the address of the new inserted node
+			list -> head -> next  = temp;
+			return true;
+		}
+		else{                   //if the new node to be inserted should go before the already present node
+			temp -> next = list -> head;
+			list -> head = temp;
+			return true;
+		}
+	}
+	
+
+	// Identify where on the list the new Node should be:
+	Node* targetP = list -> head;
+	Node* oldTargetP = NULL;
+	
+	
+	while(targetP ->  next != NULL && preceed(targetP -> next ->  songName, temp -> songName) ){
+		oldTargetP = targetP; // will only be needed of we are at the end of the list and the new node should be inserted before the last element.
+		targetP = targetP -> next;
+		
+	}
+	
+	
+	// In the case that we are at the end of the list
+	if(targetP -> next == NULL){
+		if (preceed(targetP -> songName, temp -> songName)){
+			// sets the next of the new node to the proper pointer for linking it into the list
+			temp -> next = targetP ->  next;
+			// sets the next of the previous node to the address of the new inserted node
+			targetP -> next = temp;
+			return true;
+		}
+		else{							// technically don't really need this because if the new node will be inserted before the last node then target would not have moved.
+			temp -> next = targetP;
+			oldTargetP -> next = temp;
+			return true;
+		}
+		
+	}
+	
+	
+	// sets the next of the new node to the proper pointer for linking it into the list
+	temp -> next = targetP ->  next;
+	// sets the next of the previous node to the address of the new inserted node
+	targetP -> next = temp;
+	return true;
+	
+	
+	
+}
+
+
+void printList(LinkedList* list){
+	
+	if(list -> head == NULL){
+		printMusicLibraryEmpty();
+		return;
+	}
+	
+	printMusicLibraryTitle();
+	Node* tracker = list -> head;
+	while (tracker != NULL){
+		
+		printf("%s\n", tracker -> songName);
+		printf("%s\n", tracker -> artist);
+		printf("%s\n\n", tracker -> genre);
+		
+		tracker = tracker -> next;
+		
+	}
+	
+	return;
+	
+}
+
+
+bool searchList(LinkedList* list, char* string){
+	
+	Node* tracker = list -> head;
+	while( tracker != NULL ){
+		if(strcmp(tracker -> songName, string) == 0){
+			songNameNotFound(string);
+			printf("%s\n", tracker -> songName);
+			printf("%s\n", tracker -> artist);
+			printf("%s\n\n", tracker -> genre);
+			return true;
+		}
+		tracker = tracker -> next;
+	}
+	
+	return false;
+	
+}
+
+
+bool isEmpty(LinkedList *list) {
+  if (list->head == NULL) {
+    // The head does not point to anything.
+    return true;
+  }
+  
+  return false;
+}
+
+// This function will free the memory to which the members are pointing to (since this memory has been dynamically allocated) and then frees the entire node
+void freeNode(Node* nodePointer){
+	
+	// Free elements of the node
+	free(nodePointer -> songName);
+	free(nodePointer -> artist);
+	free(nodePointer -> genre);
+	
+	//free entire node
+	free(nodePointer);
+	return;
+	
+}
+
+void deleteFront(LinkedList *list) {
+    if (isEmpty(list) == true) {
+        // The list is empty, there is nothing to delete.
+        return;
+    }
+
+    // Save the location of the node after head. Could be NULL, that's okay
+    Node *newHead = list->head->next;
+    // Free up the memory used by the current head.
+	songNameDeleted(list -> head -> songName);
+    freeNode(list->head);
+    // Update the current head to the saved location.
+    list->head = newHead;
+}
+
+
+
+
+int deleteAllNodes(LinkedList *list) {
+    int numDeleted = 0;
+
+    while (isEmpty(list) == false) {
+        deleteFront(list);
+        numDeleted++;
+    }
+
+    // The list is now empty.
+    list->head = NULL;
+
+    return numDeleted;
+}
+
+
+bool deleteFirstMatch(LinkedList *list, char* userSong) {
+    if (isEmpty(list) == true) {
+        // There is nothing to do in an empty list.
+        return false;
+    }
+
+    if ( strcmp(list->head->songName, userSong) == 0 ) {
+        // The first node matches the value.
+
+        // Save a pointer to the second element in the list. Could be NULL, that's ok.
+        Node *temp = list->head->next;
+
+        freeNode(list->head); // Delete the first element of the list.
+        list->head = temp; // Update the list to point to a new head.
+
+        return true;
+    }
+
+    // Search for a node that matches the value, but maintain a pointer to the node just before it.
+    Node *current = list->head;
+    while (current->next != NULL && strcmp(current->next->songName, userSong) != 0 ) {
+        current = current->next;
+    }
+
+    // current now points to a node just before the node that matched, OR current points to the last node.
+    if (current->next != NULL) {
+        // current does not point to the last node.
+        Node *temp = current->next; // temp is the node we must delete.
+        current->next = temp->next; // Update n so that temp is no longer linked.
+        freeNode(temp);
+
+        return true;
+    }
+
+    return false;
+}
+
